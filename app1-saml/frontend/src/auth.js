@@ -72,7 +72,7 @@ export const auth = {
   },
   
   logout() {
-    window.location.href = '/saml/logout'
+    window.location.href = 'http://localhost:3000/saml/logout'
   },
   
   login() {

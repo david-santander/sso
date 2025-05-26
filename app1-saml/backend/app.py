@@ -263,21 +263,39 @@ def saml_logout():
     if 'samlNameIdSPNameQualifier' in session:
         name_id_spnq = session['samlNameIdSPNameQualifier']
     
-    return redirect(auth.logout(name_id=name_id, session_index=session_index,
-                                nq=name_id_nq, name_id_format=name_id_format,
-                                spnq=name_id_spnq))
+    print(f"Logout - NameID: {name_id}, SessionIndex: {session_index}")
+    
+    logout_url = auth.logout(name_id=name_id, session_index=session_index,
+                            nq=name_id_nq, name_id_format=name_id_format,
+                            spnq=name_id_spnq, return_to='http://localhost:3001/')
+    
+    print(f"Logout URL: {logout_url}")
+    
+    return redirect(logout_url)
 
 @app.route('/saml/sls', methods=['GET', 'POST'])
 def saml_sls():
     req = prepare_flask_request(request)
     auth = init_saml_auth(req)
-    url = auth.process_slo(delete_session_cb=lambda: session.clear())
-    errors = auth.get_errors()
-    if not errors:
-        return redirect('/')
-    else:
-        error_reason = auth.get_last_error_reason()
-        return jsonify({'error': error_reason}), 400
+    
+    # Check if we have SAML parameters in the request
+    if 'SAMLRequest' not in request.args and 'SAMLResponse' not in request.args:
+        # No SAML parameters, just clear session and redirect
+        session.clear()
+        return redirect('http://localhost:3001/')
+    
+    try:
+        url = auth.process_slo(delete_session_cb=lambda: session.clear())
+        errors = auth.get_errors()
+        if not errors:
+            return redirect('http://localhost:3001/')
+        else:
+            error_reason = auth.get_last_error_reason()
+            return jsonify({'error': error_reason}), 400
+    except Exception as e:
+        # If there's an error, clear session and redirect anyway
+        session.clear()
+        return redirect('http://localhost:3001/')
 
 
 if __name__ == '__main__':

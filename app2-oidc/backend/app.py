@@ -187,7 +187,8 @@ def oidc_logout():
     session.clear()
     
     if id_token:
-        logout_url = f"{OIDC_ISSUER}/protocol/openid-connect/logout"
+        # Use public URL for logout since the browser needs to access it
+        logout_url = f"{OIDC_ISSUER_PUBLIC}/protocol/openid-connect/logout"
         params = {
             'id_token_hint': id_token,
             'post_logout_redirect_uri': 'http://localhost:4001'

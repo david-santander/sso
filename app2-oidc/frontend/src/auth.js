@@ -72,7 +72,7 @@ export const auth = {
   },
   
   logout() {
-    window.location.href = '/oidc/logout'
+    window.location.href = 'http://localhost:4000/oidc/logout'
   },
   
   login() {
