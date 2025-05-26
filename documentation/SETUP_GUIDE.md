@@ -158,23 +158,16 @@ docker exec sso-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server 
 docker exec sso-keycloak /opt/keycloak/bin/kcadm.sh create realms -f /tmp/sso-poc-realm.json
 ```
 
-### Step 9: Update SAML Configuration
+### Step 9: SAML Configuration Notes
 
-After Keycloak starts, we need to get its SAML certificate:
+The SAML configuration has been pre-configured and should work out of the box. Important notes:
 
-1. Access Keycloak Admin Console
-2. Select the "sso-poc" realm
-3. Go to Realm Settings → Keys
-4. Click on the RSA certificate
-5. Copy the certificate
-6. Update `app1-saml/backend/saml/settings.json` with the certificate in the `idp.x509cert` field
+1. **SAML Client ID**: The Keycloak SAML client ID must match the SP entity ID exactly: `http://localhost:3000`
+2. **Certificate**: The SAML certificate is already configured in `app1-saml/backend/saml/settings.json`
+3. **Signatures**: SAML signatures are enabled for security
+4. **Role Mapping**: Role attributes have been removed to avoid duplicate attribute conflicts
 
-### Step 10: Restart Applications (if needed)
-
-If you updated the SAML certificate:
-```bash
-docker-compose restart app1-saml
-```
+No manual configuration is needed unless you change the ports or hostnames.
 
 ## Verification Steps
 
@@ -196,7 +189,9 @@ docker-compose restart app1-saml
 - Should be already logged in (SSO)
 - Verify user information is displayed
 
-### 4. Test Role-Based Access
+### 4. Test Authentication Only
+
+**Note**: Role-based access control has been disabled in this POC to avoid SAML attribute conflicts. The applications will authenticate users but will not enforce role-based permissions.
 - Try accessing /admin, /editor pages
 - Verify access based on user roles
 
@@ -225,8 +220,14 @@ docker-compose restart app1-saml
 **Error**: `failed to compute cache key: "/frontend/dist": not found`
 **Solution**: Frontend builds are now handled in the frontend Dockerfiles automatically
 
-### Issue: SAML login fails
-**Solution**: Check SAML certificate configuration in `app1-saml/backend/saml/settings.json`
+### Issue: SAML login fails with "Invalid Request" or "Client not found"
+**Solution**: 
+1. Ensure the SAML client ID in Keycloak matches exactly: `http://localhost:3000`
+2. Check that the SP entity ID in settings.json matches the client ID
+3. Verify the AssertionConsumerService URL is correct: `http://localhost:3000/saml/callback`
+
+### Issue: SAML error "Found an Attribute element with duplicated Name"
+**Solution**: This occurs when Keycloak sends duplicate role attributes. The current configuration has role mapping disabled to avoid this issue.
 
 ### Issue: OIDC redirect fails
 **Solution**: Verify redirect URIs match exactly in Keycloak client configuration

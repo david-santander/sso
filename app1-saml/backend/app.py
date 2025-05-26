@@ -52,6 +52,26 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def check_role_hierarchy(user_roles, required_role):
+    """Check if user has required role considering role hierarchy"""
+    # Define role hierarchy - higher roles inherit permissions of lower roles
+    role_hierarchy = {
+        'admin': ['editor', 'viewer'],
+        'editor': ['viewer'],
+        'viewer': []
+    }
+    
+    # Direct role check
+    if required_role in user_roles:
+        return True
+    
+    # Check hierarchical roles
+    for user_role in user_roles:
+        if user_role in role_hierarchy and required_role in role_hierarchy[user_role]:
+            return True
+    
+    return False
+
 def require_role(role):
     def decorator(f):
         @wraps(f)
@@ -59,9 +79,13 @@ def require_role(role):
             if not session.get('authenticated', False):
                 return jsonify({'error': 'Authentication required'}), 401
             
-            # For now, disable role checking since we removed roles from SAML
-            # Always return 403 for role-protected endpoints
-            return jsonify({'error': f'Role {role} required - roles not implemented in this POC'}), 403
+            user_roles = session.get('roles', [])
+            
+            # Check if user has the required role (including hierarchy)
+            if not check_role_hierarchy(user_roles, role):
+                return jsonify({'error': f'Role {role} required. User has roles: {user_roles}'}), 403
+            
+            return f(*args, **kwargs)
         return decorated_function
     return decorator
 
@@ -73,7 +97,7 @@ def get_user():
             'authenticated': True,
             'username': session.get('username', ''),
             'email': session.get('email', ''),
-            'roles': [],
+            'roles': session.get('roles', []),
             'attributes': session.get('samlUserdata', {})
         })
     return jsonify({'authenticated': False})
@@ -91,7 +115,7 @@ def protected_resource():
 def admin_resource():
     return jsonify({
         'message': 'This is an admin-only resource',
-        'user': session['samlUserdata'].get('username', [''])[0]
+        'user': session.get('username', '')
     })
 
 @app.route('/api/editor')
@@ -99,7 +123,7 @@ def admin_resource():
 def editor_resource():
     return jsonify({
         'message': 'This is an editor-only resource',
-        'user': session['samlUserdata'].get('username', [''])[0],
+        'user': session.get('username', ''),
         'data': 'You can edit this content'
     })
 
@@ -113,30 +137,113 @@ def saml_login():
 def saml_callback():
     req = prepare_flask_request(request)
     auth = init_saml_auth(req)
-    auth.process_response()
     
-    errors = auth.get_errors()
-    if not errors:
-        # Get attributes and ensure they're serializable
-        attributes = auth.get_attributes()
+    attributes = None
+    nameid = None
+    errors = []
+    
+    try:
+        auth.process_response()
+        errors = auth.get_errors()
+        if not errors:
+            attributes = auth.get_attributes()
+            nameid = auth.get_nameid()
+    except Exception as e:
+        # Handle duplicate attribute error by getting raw response
+        if "duplicated Name" in str(e):
+            # Get attributes manually from the SAML response
+            import xml.etree.ElementTree as ET
+            import base64
+            
+            saml_response = request.form.get('SAMLResponse')
+            decoded = base64.b64decode(saml_response)
+            root = ET.fromstring(decoded)
+            
+            # Extract attributes manually
+            attributes = {}
+            namespaces = {
+                'saml': 'urn:oasis:names:tc:SAML:2.0:assertion',
+                'samlp': 'urn:oasis:names:tc:SAML:2.0:protocol'
+            }
+            
+            # Find all attributes
+            for attr in root.findall('.//saml:Attribute', namespaces):
+                name = attr.get('Name')
+                values = []
+                for value in attr.findall('saml:AttributeValue', namespaces):
+                    if value.text:
+                        values.append(value.text)
+                if name and values:
+                    if name not in attributes:
+                        attributes[name] = values
+                    else:
+                        # Handle multiple attributes with same name (e.g., roles)
+                        if isinstance(attributes[name], list):
+                            attributes[name].extend(values)
+                        else:
+                            attributes[name] = [attributes[name]] + values
+            
+            # Get NameID
+            nameid_elem = root.find('.//saml:NameID', namespaces)
+            nameid = nameid_elem.text if nameid_elem is not None else ''
+            
+            # Process the attributes as if auth.process_response() succeeded
+            errors = []
+        else:
+            return jsonify({'error': str(e)}), 400
+    
+    if not errors and attributes is not None:
+        # Extract roles from SAML attributes
+        roles = []
+        # Try different possible role attribute names
+        role_attrs = ['userRoles', 'Role', 'roles', 'memberOf', 'groups', 'role']
+        for attr_name in role_attrs:
+            if attr_name in attributes:
+                attr_value = attributes[attr_name]
+                if isinstance(attr_value, list):
+                    roles.extend(attr_value)
+                else:
+                    roles.append(attr_value)
+        
+        # Remove duplicates and ensure we have a clean list
+        roles = list(set(roles))
         
         # Store user data in session
         session['authenticated'] = True
         session['username'] = attributes.get('username', [''])[0] if attributes.get('username') else ''
         session['email'] = attributes.get('email', [''])[0] if attributes.get('email') else ''
-        session['samlNameId'] = auth.get_nameid()
-        session['samlSessionIndex'] = auth.get_session_index()
+        session['roles'] = roles
+        session['samlNameId'] = nameid
+        session['samlSessionIndex'] = auth.get_session_index() if hasattr(auth, 'get_session_index') else None
         
         # Store full attributes as simple dict
         session['samlUserdata'] = {
             'username': session['username'],
-            'email': session['email']
+            'email': session['email'],
+            'roles': roles
         }
+        
+        # Log for debugging
+        print(f"SAML Auth Success - User: {session['username']}, Roles: {roles}")
+        print(f"All SAML Attributes: {attributes}")
+        
+        # Debug: Log the raw SAML response
+        import base64
+        saml_response = request.form.get('SAMLResponse')
+        if saml_response:
+            try:
+                decoded = base64.b64decode(saml_response)
+                # Save to file for analysis
+                with open('/tmp/saml_response_debug.xml', 'wb') as f:
+                    f.write(decoded)
+                print("SAML Response saved to /tmp/saml_response_debug.xml")
+            except Exception as e:
+                print(f"Error saving SAML response: {e}")
         
         # Redirect to frontend
         return redirect('http://localhost:3001/')
     else:
-        error_reason = auth.get_last_error_reason()
+        error_reason = auth.get_last_error_reason() if hasattr(auth, 'get_last_error_reason') else 'Authentication failed'
         return jsonify({'error': error_reason}), 400
 
 @app.route('/saml/logout')

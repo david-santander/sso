@@ -36,7 +36,6 @@
   "accessCodeLifespanLogin": 1800,
   "actionTokenGeneratedByAdminLifespan": 43200,
   "actionTokenGeneratedByUserLifespan": 300,
-  "enabled": true,
   "internationalizationEnabled": false,
   "supportedLocales": [],
   "defaultRoles": ["offline_access", "uma_authorization"],
@@ -183,6 +182,19 @@
             "user.attribute": "email",
             "friendly.name": "email",
             "attribute.name": "email"
+          }
+        },
+        {
+          "name": "user-roles",
+          "protocol": "saml",
+          "protocolMapper": "saml-role-list-mapper",
+          "consentRequired": false,
+          "config": {
+            "single": "false",
+            "attribute.nameformat": "Basic",
+            "attribute.name": "userRoles",
+            "full.path": "false",
+            "friendly.name": "userRoles"
           }
         }
       ],

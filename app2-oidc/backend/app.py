@@ -2,34 +2,39 @@ import os
 import json
 from flask import Flask, request, redirect, session, jsonify, url_for
 from flask_cors import CORS
-from flask_session import Session
 from authlib.integrations.flask_client import OAuth
 from functools import wraps
 import jwt
 from jwt import PyJWKClient
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-in-production')
 
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SESSION_PERMANENT'] = False
-app.config['SESSION_USE_SIGNER'] = True
-Session(app)
+# Configure session - use Flask's built-in cookie-based sessions
+app.config['SESSION_COOKIE_NAME'] = 'oidc_session'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hour
 
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=['http://localhost:4001'])
 
 oauth = OAuth(app)
 
 OIDC_CLIENT_ID = os.environ.get('OIDC_CLIENT_ID', 'app2-oidc')
 OIDC_CLIENT_SECRET = os.environ.get('OIDC_CLIENT_SECRET', 'secret')
-OIDC_ISSUER = os.environ.get('OIDC_ISSUER', 'http://localhost:8080/realms/sso-poc')
-OIDC_REDIRECT_URI = os.environ.get('OIDC_REDIRECT_URI', 'http://localhost:5002/oidc/callback')
+OIDC_ISSUER = os.environ.get('OIDC_ISSUER', 'http://keycloak:8080/realms/sso-poc')
+OIDC_ISSUER_PUBLIC = os.environ.get('OIDC_ISSUER_PUBLIC', 'http://localhost:8080/realms/sso-poc')
+OIDC_REDIRECT_URI = os.environ.get('OIDC_REDIRECT_URI', 'http://localhost:4000/oidc/callback')
 
+# Configure OAuth with explicit endpoints to avoid metadata discovery issues
 oidc = oauth.register(
     'oidc',
     client_id=OIDC_CLIENT_ID,
     client_secret=OIDC_CLIENT_SECRET,
-    server_metadata_url=f'{OIDC_ISSUER}/.well-known/openid-configuration',
+    access_token_url=f'{OIDC_ISSUER}/protocol/openid-connect/token',
+    authorize_url=f'{OIDC_ISSUER_PUBLIC}/protocol/openid-connect/auth',
+    jwks_uri=f'{OIDC_ISSUER}/protocol/openid-connect/certs',
     client_kwargs={
         'scope': 'openid email profile roles'
     }
@@ -43,6 +48,26 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def check_role_hierarchy(user_roles, required_role):
+    """Check if user has required role considering role hierarchy"""
+    # Define role hierarchy - higher roles inherit permissions of lower roles
+    role_hierarchy = {
+        'admin': ['editor', 'viewer'],
+        'editor': ['viewer'],
+        'viewer': []
+    }
+    
+    # Direct role check
+    if required_role in user_roles:
+        return True
+    
+    # Check hierarchical roles
+    for user_role in user_roles:
+        if user_role in role_hierarchy and required_role in role_hierarchy[user_role]:
+            return True
+    
+    return False
+
 def require_role(role):
     def decorator(f):
         @wraps(f)
@@ -51,8 +76,10 @@ def require_role(role):
                 return jsonify({'error': 'Authentication required'}), 401
             
             user_roles = session.get('user', {}).get('roles', [])
-            if role not in user_roles:
-                return jsonify({'error': f'Role {role} required'}), 403
+            
+            # Check if user has the required role (including hierarchy)
+            if not check_role_hierarchy(user_roles, role):
+                return jsonify({'error': f'Role {role} required. User has roles: {user_roles}'}), 403
             
             return f(*args, **kwargs)
         return decorated_function
@@ -63,12 +90,13 @@ def decode_token(token):
         jwks_client = PyJWKClient(f'{OIDC_ISSUER}/protocol/openid-connect/certs')
         signing_key = jwks_client.get_signing_key_from_jwt(token)
         
+        # The token will have the public issuer URL, so we need to validate against that
         data = jwt.decode(
             token,
             signing_key.key,
             algorithms=['RS256'],
             audience=OIDC_CLIENT_ID,
-            issuer=OIDC_ISSUER,
+            issuer=OIDC_ISSUER_PUBLIC,
             options={"verify_exp": True}
         )
         return data
@@ -116,7 +144,8 @@ def editor_resource():
 
 @app.route('/oidc/login')
 def oidc_login():
-    redirect_uri = url_for('oidc_callback', _external=True)
+    # Use the configured redirect URI instead of generating it
+    redirect_uri = OIDC_REDIRECT_URI
     return oidc.authorize_redirect(redirect_uri)
 
 @app.route('/oidc/callback')
@@ -147,7 +176,7 @@ def oidc_callback():
                     'refresh_token': token.get('refresh_token')
                 }
         
-        return redirect('/')
+        return redirect('http://localhost:4001/')
     except Exception as e:
         print(f"OIDC callback error: {e}")
         return jsonify({'error': str(e)}), 400
@@ -161,12 +190,12 @@ def oidc_logout():
         logout_url = f"{OIDC_ISSUER}/protocol/openid-connect/logout"
         params = {
             'id_token_hint': id_token,
-            'post_logout_redirect_uri': 'http://localhost:5002'
+            'post_logout_redirect_uri': 'http://localhost:4001'
         }
         logout_url_with_params = logout_url + '?' + '&'.join([f'{k}={v}' for k, v in params.items()])
         return redirect(logout_url_with_params)
     
-    return redirect('/')
+    return redirect('http://localhost:4001/')
 
 
 if __name__ == '__main__':

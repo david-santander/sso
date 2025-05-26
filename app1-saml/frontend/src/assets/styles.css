@@ -89,7 +89,15 @@ body {
   margin-bottom: 1.5rem;
 }
 
-.user-info, .saml-info {
+.user-info {
+  color: #ecf0f1;
+  padding: 0.5rem 1rem;
+  background-color: rgba(255,255,255,0.1);
+  border-radius: 4px;
+  margin: 0 0.5rem;
+}
+
+.saml-info {
   margin-top: 2rem;
 }
 

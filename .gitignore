@@ -4,56 +4,185 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+*.log
+
+# Flask
+instance/
+.webassets-cache
+flask_session/
+
+# Virtual Environments
 venv/
 ENV/
-flask_session/
-instance/
-.pytest_cache/
+env/
+.venv
+.ENV
+.env
 
 # Node.js
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
 dist/
-.npm
-.yarn-integrity
+dist-ssr/
+*.local
+
+# Vue/Vite
+.vite/
+*.log
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+*~
+.DS_Store
+
+# Docker
+.dockerignore
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Certificates and Keys
+*.pem
+*.key
+*.crt
+*.cer
+*.pfx
+*.p12
+privatekey.pem
+publickey.pem
+sp.crt
+sp.key
+idp.crt
+
+# Keycloak
+keycloak/data/
+keycloak/logs/
+
+# PostgreSQL
+postgres_data/
+
+# SAML
+app1-saml/backend/saml/certs/*.pem
+app1-saml/backend/saml/certs/*.crt
+app1-saml/backend/saml/certs/*.key
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+.cache/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Docker
-.docker/
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# SAML
-*.pem
-*.crt
-*.key
-app1-saml/backend/saml/certs/
-
-# Build artifacts
+# Production builds
 build/
-*.egg-info/
+dist/
 
-# Keycloak
-keycloak/data/
+# Local development
+.local/
+*.local
 
-# Misc
-.cache/
-coverage/
-.coverage
+# Backup files
+*.backup
+*.bkp
+backup/
+
+# Session data
+sessions/
+flask_session/
+
+# Documentation build
+docs/_build/
+documentation/site/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# Poetry
+poetry.lock
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# pytype
+.pytype/
+
+# Cython
+cython_debug/

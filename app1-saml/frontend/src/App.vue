@@ -8,6 +8,9 @@
           <router-link to="/protected" v-if="isAuthenticated">Protected</router-link>
           <router-link to="/admin" v-if="hasRole('admin')">Admin</router-link>
           <router-link to="/editor" v-if="hasRole('editor')">Editor</router-link>
+          <span v-if="isAuthenticated" class="user-info">
+            {{ user.username }} ({{ user.roles.join(', ') }})
+          </span>
           <button v-if="!isAuthenticated" @click="login" class="btn-primary">Login</button>
           <button v-else @click="logout" class="btn-secondary">Logout</button>
         </div>
@@ -20,49 +23,34 @@
 </template>
 
 <script>
-import { ref, onMounted, provide } from 'vue'
-import axios from 'axios'
+import { computed, onMounted, provide } from 'vue'
+import { auth } from './auth'
 
 export default {
   name: 'App',
   setup() {
-    const user = ref(null)
-    const isAuthenticated = ref(false)
-
-    const checkAuth = async () => {
-      try {
-        const response = await axios.get('/api/user')
-        if (response.data.authenticated) {
-          user.value = response.data
-          isAuthenticated.value = true
-        } else {
-          user.value = null
-          isAuthenticated.value = false
-        }
-      } catch (error) {
-        console.error('Error checking auth:', error)
-        user.value = null
-        isAuthenticated.value = false
-      }
-    }
+    const user = computed(() => auth.state.user)
+    const isAuthenticated = computed(() => auth.state.isAuthenticated)
 
     const hasRole = (role) => {
-      return user.value && user.value.roles && user.value.roles.includes(role)
+      return auth.hasRole(role)
     }
 
     const login = () => {
-      window.location.href = '/saml/login'
+      auth.login()
     }
 
     const logout = () => {
-      window.location.href = '/saml/logout'
+      auth.logout()
     }
 
     onMounted(() => {
-      checkAuth()
+      // Auth check is already done in main.js, but refresh here in case
+      auth.checkAuth()
     })
 
-    provide('checkAuth', checkAuth)
+    provide('checkAuth', auth.checkAuth)
+    provide('auth', auth)
 
     return {
       user,

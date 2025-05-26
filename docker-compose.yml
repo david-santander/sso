@@ -49,6 +49,7 @@ services:
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=development
+      - SECRET_KEY=dev-secret-key-change-in-production
       - SAML_IDP_ENTITY_ID=http://localhost:8080/realms/sso-poc
       - SAML_IDP_SSO_URL=http://localhost:8080/realms/sso-poc/protocol/saml
       - SAML_IDP_SLO_URL=http://localhost:8080/realms/sso-poc/protocol/saml
@@ -83,9 +84,11 @@ services:
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=development
+      - SECRET_KEY=dev-secret-key-change-in-production
       - OIDC_CLIENT_ID=app2-oidc
       - OIDC_CLIENT_SECRET=secret
-      - OIDC_ISSUER=http://localhost:8080/realms/sso-poc
+      - OIDC_ISSUER=http://keycloak:8080/realms/sso-poc
+      - OIDC_ISSUER_PUBLIC=http://localhost:8080/realms/sso-poc
       - OIDC_REDIRECT_URI=http://localhost:4000/oidc/callback
     depends_on:
       - keycloak

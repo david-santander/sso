@@ -61,25 +61,25 @@ This project demonstrates Single Sign-On (SSO) functionality using SAML 2.0 and 
 
 ## Test Users
 
-| Username | Password | Roles | Email |
-|----------|----------|-------|-------|
-| admin_user | password123 | admin, editor, viewer | admin@example.com |
-| editor_user | password123 | editor, viewer | editor@example.com |
-| viewer_user | password123 | viewer | viewer@example.com |
+| Username | Password | Email |
+|----------|----------|-------|
+| admin_user | password | admin@example.com |
+| user1 | password | user1@example.com |
+
+**Note**: Role-based access control has been disabled in this POC to avoid SAML attribute conflicts.
 
 ## Testing SSO Flows
 
 ### SAML Flow (App1)
 
-1. Navigate to http://localhost:5001
+1. Navigate to http://localhost:3001
 2. Click "Login with SAML"
 3. Login with one of the test users
 4. You'll be redirected back to App1 with user information displayed
-5. Access role-based resources based on your user's roles
 
 ### OIDC Flow (App2)
 
-1. Navigate to http://localhost:5002
+1. Navigate to http://localhost:4001
 2. Click "Login with OIDC"
 3. Login with one of the test users (if not already logged in)
 4. You'll be redirected back to App2 with user information displayed
@@ -129,6 +129,13 @@ Each application has the following protected endpoints:
 2. **Realm import fails**: Wait longer for Keycloak to fully start
 3. **Login redirects fail**: Check that all URLs use `localhost` consistently
 4. **Vue.js build errors**: Ensure Node.js is installed and up to date
+
+## Critical Configuration
+
+⚠️ **IMPORTANT**: Please read [CRITICAL_CONFIGURATION.md](documentation/CRITICAL_CONFIGURATION.md) for essential configuration requirements, especially regarding:
+- SAML client ID matching
+- Port configurations
+- Session management changes
 
 ## Project Structure
 
