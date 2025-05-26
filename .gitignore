@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+flask_session/
+instance/
+.pytest_cache/
+
+# Node.js
+node_modules/
+dist/
+.npm
+.yarn-integrity
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# SAML
+*.pem
+*.crt
+*.key
+app1-saml/backend/saml/certs/
+
+# Build artifacts
+build/
+*.egg-info/
+
+# Keycloak
+keycloak/data/
+
+# Misc
+.cache/
+coverage/
+.coverage

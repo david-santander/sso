@@ -1,0 +1,30 @@
+{
+    "strict": false,
+    "debug": true,
+    "sp": {
+        "entityId": "http://localhost:3000",
+        "assertionConsumerService": {
+            "url": "http://localhost:3000/saml/callback",
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+        },
+        "singleLogoutService": {
+            "url": "http://localhost:3000/saml/sls",
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+        },
+        "NameIDFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified",
+        "x509cert": "",
+        "privateKey": ""
+    },
+    "idp": {
+        "entityId": "http://localhost:8080/realms/sso-poc",
+        "singleSignOnService": {
+            "url": "http://localhost:8080/realms/sso-poc/protocol/saml",
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+        },
+        "singleLogoutService": {
+            "url": "http://localhost:8080/realms/sso-poc/protocol/saml",
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+        },
+        "x509cert": "MIICnTCCAYUCBgGXC2Xe0zANBgkqhkiG9w0BAQsFADASMRAwDgYDVQQDDAdzc28tcG9jMB4XDTI1MDUyNjA3MDAxNVoXDTM1MDUyNjA3MDE1NVowEjEQMA4GA1UEAwwHc3NvLXBvYzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMSUUvHC5NnoiRfe+1MNRH0v5ajGsNsy8g7ZZBveG1iScOmYXOxeYw2ElTddUtpk1XHbT8zfS+nBW0OAqYxVsGpIsdWPG40EkaqMdoZRtHW580A7/JUG7W6ELSfWseXXdhtAwgMYPgFgiJkIo07CU3FY2brxbtnH5LkEi5Tci4gcbpjeZLxk37MN8rOEjRBedVfQHRCHNErmsuk9uq0bvnLuUf6OWnUxfob7pCfYjcC2A0Fub4wMXxbmvZ+I487CsohDGoFbtXV475KIB7VEmVNEVGjSwxvImL4rTMAARe9hqvdGMwDqliHXBY4dJtEyOpKX0M0ppNNO03/nO0d8qQUCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAQThhkwWF7YQhiwqhJWeRoxE/oyQ2PRK9eE9XUpHGjYR/Q4IqhAVwNyy5AuQv5Cl6eCK4uMVzi+239rKy9+4gM0WyKzEsiICnZuJyNbealYmjYSY6EFIUnb4mA7hG1s53AVxXKZZEgX9CtZf04mkPvlu0S0OWIx5fpndpXYnzN6qBxFtsldoPV9dMU5oAoHUl3A5fNMw5Pbk5qSu7544q9xiYmw1y+GDRt8F5HIy8rQRV3J5Af0QvtU6Um8Y6fYZFVQqx8a0IYICcMIh/H7++ZuFp2P5cNFpM4SiaOiTdidWV8z7ZBNq8unFHEFMmwRuwaUbXX4wbRW1kbHnTzZcNcA=="
+    }
+}
