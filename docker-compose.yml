@@ -1,117 +1,148 @@
+# Docker Compose configuration for SSO POC
+# This file orchestrates the entire SSO demonstration environment including:
+# - Keycloak as the Identity Provider (IdP)
+# - PostgreSQL database for Keycloak
+# - SAML-based application (App1)
+# - OIDC-based application (App2)
+# - All necessary networking and dependencies
+
 services:
+  # Keycloak Identity Provider
+  # Provides both SAML 2.0 and OpenID Connect protocols
   keycloak:
     image: quay.io/keycloak/keycloak:latest
     container_name: sso-keycloak
     environment:
+      # Admin credentials - CHANGE IN PRODUCTION
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
+      # Database configuration
       - KC_DB=postgres
       - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
       - KC_DB_USERNAME=keycloak
       - KC_DB_PASSWORD=keycloak
+      # Hostname configuration for local development
       - KC_HOSTNAME=localhost
       - KC_HOSTNAME_PORT=8080
-      - KC_HOSTNAME_STRICT=false
-      - KC_HOSTNAME_STRICT_HTTPS=false
-      - KC_HTTP_ENABLED=true
-      - KC_PROXY=edge
+      - KC_HOSTNAME_STRICT=false  # Allow access from different hostnames
+      - KC_HOSTNAME_STRICT_HTTPS=false  # Allow HTTP for development
+      - KC_HTTP_ENABLED=true  # Enable HTTP (disable in production)
+      - KC_PROXY=edge  # Running behind a proxy/load balancer
     ports:
-      - "8080:8080"
+      - "8080:8080"  # Keycloak admin console and authentication endpoints
     volumes:
+      # Mount realm configuration for automatic import
       - ./keycloak/realms:/opt/keycloak/data/import
     command:
-      - start-dev
-      - --import-realm
+      - start-dev  # Development mode - use 'start' for production
+      - --import-realm  # Automatically import realm configuration on startup
     depends_on:
-      - postgres
+      - postgres  # Ensure database is ready before starting
     networks:
       - sso-network
 
+  # PostgreSQL database for Keycloak persistence
   postgres:
     image: postgres:15-alpine
     container_name: sso-postgres
     environment:
+      # Database credentials - CHANGE IN PRODUCTION
       - POSTGRES_DB=keycloak
       - POSTGRES_USER=keycloak
       - POSTGRES_PASSWORD=keycloak
     volumes:
+      # Persist database data between container restarts
       - postgres_data:/var/lib/postgresql/data
     networks:
       - sso-network
 
+  # SAML Application Backend (App1)
+  # Demonstrates SAML 2.0 authentication with role-based access control
   app1-saml-backend:
     build:
       context: ./app1-saml
       dockerfile: Dockerfile
     container_name: sso-app1-saml-backend
     ports:
-      - "3000:5000"
+      - "3000:5000"  # Backend API port
     environment:
       - FLASK_APP=app.py
-      - FLASK_ENV=development
-      - SECRET_KEY=dev-secret-key-change-in-production
-      - SAML_IDP_ENTITY_ID=http://localhost:8080/realms/sso-poc
-      - SAML_IDP_SSO_URL=http://localhost:8080/realms/sso-poc/protocol/saml
-      - SAML_IDP_SLO_URL=http://localhost:8080/realms/sso-poc/protocol/saml
-      - SAML_SP_ENTITY_ID=http://localhost:3000
-      - SAML_SP_CALLBACK_URL=http://localhost:3000/saml/callback
+      - FLASK_ENV=development  # Set to 'production' in production
+      - SECRET_KEY=dev-secret-key-change-in-production  # CHANGE IN PRODUCTION
+      # SAML Configuration
+      - SAML_IDP_ENTITY_ID=http://localhost:8080/realms/sso-poc  # Keycloak realm URL
+      - SAML_IDP_SSO_URL=http://localhost:8080/realms/sso-poc/protocol/saml  # SAML SSO endpoint
+      - SAML_IDP_SLO_URL=http://localhost:8080/realms/sso-poc/protocol/saml  # SAML logout endpoint
+      - SAML_SP_ENTITY_ID=http://localhost:3000  # Service Provider ID
+      - SAML_SP_CALLBACK_URL=http://localhost:3000/saml/callback  # SAML assertion consumer
     depends_on:
-      - keycloak
+      - keycloak  # Wait for IdP to be available
     networks:
       - sso-network
     volumes:
+      # Mount source code for hot reloading in development
       - ./app1-saml/backend:/app
 
+  # SAML Application Frontend (App1)
+  # Vue.js SPA with SAML authentication integration
   app1-saml-frontend:
     build:
       context: ./app1-saml/frontend
       dockerfile: Dockerfile
     container_name: sso-app1-saml-frontend
     ports:
-      - "3001:80"
+      - "3001:80"  # Frontend web server port
     depends_on:
-      - app1-saml-backend
+      - app1-saml-backend  # Ensure backend is available
     networks:
       - sso-network
 
+  # OIDC Application Backend (App2)
+  # Demonstrates OpenID Connect authentication with role-based access control
   app2-oidc-backend:
     build:
       context: ./app2-oidc
       dockerfile: Dockerfile
     container_name: sso-app2-oidc-backend
     ports:
-      - "4000:5000"
+      - "4000:5000"  # Backend API port
     environment:
       - FLASK_APP=app.py
-      - FLASK_ENV=development
-      - SECRET_KEY=dev-secret-key-change-in-production
-      - OIDC_CLIENT_ID=app2-oidc
-      - OIDC_CLIENT_SECRET=secret
-      - OIDC_ISSUER=http://keycloak:8080/realms/sso-poc
-      - OIDC_ISSUER_PUBLIC=http://localhost:8080/realms/sso-poc
-      - OIDC_REDIRECT_URI=http://localhost:4000/oidc/callback
+      - FLASK_ENV=development  # Set to 'production' in production
+      - SECRET_KEY=dev-secret-key-change-in-production  # CHANGE IN PRODUCTION
+      # OIDC Configuration
+      - OIDC_CLIENT_ID=app2-oidc  # Must match Keycloak client configuration
+      - OIDC_CLIENT_SECRET=secret  # CHANGE IN PRODUCTION - use secure secret
+      - OIDC_ISSUER=http://keycloak:8080/realms/sso-poc  # Internal issuer URL
+      - OIDC_ISSUER_PUBLIC=http://localhost:8080/realms/sso-poc  # Public issuer URL
+      - OIDC_REDIRECT_URI=http://localhost:4000/oidc/callback  # OAuth2 redirect URI
     depends_on:
-      - keycloak
+      - keycloak  # Wait for IdP to be available
     networks:
       - sso-network
     volumes:
+      # Mount source code for hot reloading in development
       - ./app2-oidc/backend:/app
 
+  # OIDC Application Frontend (App2)
+  # Vue.js SPA with OpenID Connect authentication integration
   app2-oidc-frontend:
     build:
       context: ./app2-oidc/frontend
       dockerfile: Dockerfile
     container_name: sso-app2-oidc-frontend
     ports:
-      - "4001:80"
+      - "4001:80"  # Frontend web server port
     depends_on:
-      - app2-oidc-backend
+      - app2-oidc-backend  # Ensure backend is available
     networks:
       - sso-network
 
+# Named volumes for data persistence
 volumes:
-  postgres_data:
+  postgres_data:  # Persists Keycloak database between container restarts
 
+# Custom network for inter-container communication
 networks:
   sso-network:
-    driver: bridge
+    driver: bridge  # Default bridge network for container isolation

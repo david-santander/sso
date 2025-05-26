@@ -1,3 +1,17 @@
+<!--
+  Home View Component - Landing page for OIDC demo application
+  
+  This component:
+  - Displays user information when authenticated
+  - Shows OIDC claims received from the identity provider
+  - Provides educational content about OIDC vs SAML
+  - Offers login option for unauthenticated users
+  
+  Key features:
+  - Demonstrates OIDC token claims display
+  - Shows role-based access information
+  - Educates users about OIDC authentication flow
+-->
 <template>
   <div class="home">
     <h2>Welcome to OIDC RP Demo Application</h2>
@@ -12,6 +26,8 @@
       
       <div class="oidc-info">
         <h3>OIDC Claims</h3>
+        <!-- Display raw OIDC claims from ID token -->
+        <!-- These claims are extracted from the JWT ID token by the backend -->
         <div class="attributes">
           <pre>{{ JSON.stringify(user.attributes, null, 2) }}</pre>
         </div>
@@ -48,10 +64,25 @@
 </template>
 
 <script>
+/**
+ * Home view component
+ * 
+ * Serves as the landing page and provides:
+ * - User information display for authenticated users
+ * - OIDC claims visualization
+ * - Educational content about OIDC
+ * - Login entry point for unauthenticated users
+ * 
+ * Note: User prop is passed from App.vue root component
+ */
 export default {
   name: 'Home',
   props: ['user'],
   methods: {
+    /**
+     * Redirect to OIDC login endpoint
+     * Backend will handle the OIDC authorization code flow
+     */
     login() {
       window.location.href = '/oidc/login'
     }
